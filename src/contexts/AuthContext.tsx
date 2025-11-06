@@ -1,86 +1,146 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { authApi } from '@/lib/api';
 
 type User = {
-  id: string;
+  username: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'admin' | 'user';
+  full_name: string;
+  disabled: boolean;
 };
 
 type AuthContextType = {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: 'user' | 'admin') => Promise<void>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (data: {
+    username: string;
+    email: string;
+    full_name: string;
+    role: 'admin' | 'user';
+    password: string;
+  }) => Promise<void>;
   logout: () => void;
-  loading: boolean;
+  error: string | null;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Check for existing session on initial load
   useEffect(() => {
-    // In a real app, you would verify the session with your backend
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          try {
+            const userData = await authApi.getCurrentUser(token);
+            setUser({
+              username: userData.username,
+              email: userData.email,
+              full_name: userData.full_name || '',
+              role: userData.role || 'user',
+              disabled: userData.disabled || false,
+            });
+          } catch (err) {
+            console.error('Failed to validate token', err);
+            // Clear invalid token
+            localStorage.removeItem('access_token');
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check auth status', err);
+        localStorage.removeItem('access_token');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const login = async (email: string, _password: string) => {
-    // In a real app, you would make an API call to your backend
-    // For demo purposes, we'll simulate a successful login
-    const mockUser = {
-      id: '1',
-      email,
-      role: email.includes('admin') ? 'admin' as const : 'user' as const
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    navigate('/dashboard');
-  };
+  const login = useCallback(async (username: string, password: string) => {
+    try {
+      setError(null);
+      const response = await authApi.login({ username, password });
+      const { access_token, user } = response.data;
+      
+      // Store the access token in memory
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('user', user);
+      
+      // Set the user in the auth context
+      setUser({
+        username: user.username,
+        email: user.email,
+        full_name: user.full_name || '',
+        role: user.role || 'user',
+        disabled: user.disabled || false,
+      });
+      
+      console.log("User set in context");
+      
+      // Redirect to the previous location or dashboard
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+      console.log("Navigation complete")
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Login failed');
+      throw err;
+    }
+  }, [navigate, location.state]);
 
-  const register = async (email: string, _password: string, role: 'user' | 'admin') => {
-    // In a real app, you would make an API call to your backend
-    // For demo purposes, we'll simulate a successful registration
-    const mockUser = {
-      id: Date.now().toString(),
-      email,
-      role
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    navigate('/dashboard');
-  };
+  const register = useCallback(async (data: {
+    username: string;
+    email: string;
+    full_name: string;
+    role: 'admin' | 'user';
+    password: string;
+  }) => {
+    try {
+      setError(null);
+      await authApi.register(data);
+      // After successful registration, log the user in
+      await login(data.username, data.password);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Registration failed');
+      throw err;
+    }
+  }, [login]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    localStorage.removeItem('access_token');
     setUser(null);
-    localStorage.removeItem('user');
     navigate('/login');
-  };
+  }, [navigate]);
 
   const value = {
     user,
+    isAuthenticated: !!user,
+    isLoading,
     login,
     register,
     logout,
-    loading,
+    error,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

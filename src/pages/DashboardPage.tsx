@@ -25,10 +25,9 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Students</h2>
             {user?.role === 'admin' && (
               <Button asChild>
-                <Link to="/students/new">Add New Student</Link>
+                <Link to="/students/new">Get Latest Student Data</Link>
               </Button>
             )}
           </div>
