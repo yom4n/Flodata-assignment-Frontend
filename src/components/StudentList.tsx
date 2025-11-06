@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Link } from 'react-router-dom';
 import type { Student } from '../lib/api';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import { AddStudentModal } from './AddStudentModal';
 import { EditStudentModal } from './EditStudentModal';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+import { Search } from 'lucide-react';
 
 type StudentListProps = {
   isAdmin: boolean;
@@ -15,6 +17,8 @@ type StudentListProps = {
 
 export default function StudentList({ isAdmin }: StudentListProps) {
   const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -26,6 +30,7 @@ export default function StudentList({ isAdmin }: StudentListProps) {
       setIsLoading(true);
       const data = await studentApi.getStudents();
       setStudents(data);
+      setFilteredStudents(data);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast.error('Failed to load students');
@@ -33,6 +38,22 @@ export default function StudentList({ isAdmin }: StudentListProps) {
       setIsLoading(false);
     }
   };
+
+  // Filter students based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredStudents(students);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = students.filter(
+      (student) =>
+        student.name.toLowerCase().includes(query) ||
+        student.roll_number.toLowerCase().includes(query)
+    );
+    setFilteredStudents(filtered);
+  }, [searchQuery, students]);
 
   useEffect(() => {
     fetchStudents();
@@ -73,13 +94,25 @@ export default function StudentList({ isAdmin }: StudentListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center px-5 pt-5">
-        <h2 className="text-2xl font-bold">Students</h2>
-        {isAdmin && (
-          <Button onClick={() => setIsAddModalOpen(true)}>
-            Add New Student
-          </Button>
-        )}
+      <div className="px-5 pt-5 space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Students</h2>
+          {isAdmin && (
+            <Button onClick={() => setIsAddModalOpen(true)}>
+              Add New Student
+            </Button>
+          )}
+        </div>
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by name or roll number..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -94,14 +127,14 @@ export default function StudentList({ isAdmin }: StudentListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.length === 0 ? (
+            {filteredStudents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">
-                  No students found
+                  {searchQuery ? 'No matching students found' : 'No students found'}
                 </TableCell>
               </TableRow>
             ) : (
-              students.map((student) => (
+              filteredStudents.map((student) => (
                 <TableRow key={student._id}>
                   <TableCell className="font-medium">{student.name}</TableCell>
                   <TableCell>{student.roll_number}</TableCell>
