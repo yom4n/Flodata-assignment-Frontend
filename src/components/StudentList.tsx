@@ -73,7 +73,7 @@ export default function StudentList({ isAdmin }: StudentListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center px-5 pt-5">
         <h2 className="text-2xl font-bold">Students</h2>
         {isAdmin && (
           <Button onClick={() => setIsAddModalOpen(true)}>

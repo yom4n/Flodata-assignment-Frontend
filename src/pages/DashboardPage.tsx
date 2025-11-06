@@ -13,7 +13,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-gray-900">Student Management System</h1>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-700">
-              Logged in as <span className="font-medium">{user?.email}</span> ({user?.role})
+              <span className="font-medium">{user?.username}</span> ({user?.role})
             </span>
             <Button variant="outline" onClick={logout}>
               Logout
