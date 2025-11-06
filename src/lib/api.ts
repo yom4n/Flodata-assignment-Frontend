@@ -21,11 +21,6 @@ export interface StudentCreateData extends StudentBase {}
 
 export interface StudentUpdateData extends Partial<StudentBase> {}
 
-// API Response types (kept for future use)
-type ErrorResponse = {
-  message: string;
-  detail?: string;
-};
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,

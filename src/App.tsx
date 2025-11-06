@@ -2,8 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+import {LoginForm} from './pages/LoginForm';
+import {RegisterForm} from './pages/RegisterForm';
 import DashboardPage from './pages/DashboardPage';
 
 function App() {
@@ -12,8 +12,8 @@ function App() {
       <AuthProvider>
         <div className="min-h-screen">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/register" element={<RegisterForm />} />
             <Route
               path="/"
               element={

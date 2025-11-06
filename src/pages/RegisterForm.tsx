@@ -38,9 +38,9 @@ export function RegisterForm() {
   const onSubmit = async (data: FormData) => {
     try {
       await registerUser(data);
-      // Redirect is handled in the register function
+      // Redirect is handled in the register function like loginform
     } catch (error) {
-      // Error is handled by the auth context
+      // Error is handled by the auth context like loginform
     }
   };
 
